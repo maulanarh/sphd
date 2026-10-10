@@ -19,7 +19,7 @@ input,select{width:100%;padding:9px;border:1px solid var(--ln);border-radius:7px
 .b button.s,.row button.s{background:var(--ac2);color:var(--tx)}
 small{color:var(--mu);display:block;margin-top:4px}
 .row{display:flex;gap:8px;align-items:center;padding:9px 0;border-bottom:1px solid var(--ln)}.row div{flex:1}.row span{color:var(--mu);font-size:12.5px}
-#tab2{display:none}.ck{display:flex;gap:8px;align-items:center;font-size:13.5px;color:var(--tx);margin:6px 0}.ck input{width:auto}
+#tab2{display:none}.s2{width:100%;padding:9px;border-radius:7px;border:1px solid var(--ln);background:var(--ac2);color:var(--tx);font:inherit;cursor:pointer}.chip{padding:5px 10px;border-radius:99px;background:var(--ac2);border:1px solid var(--ln);color:var(--tx);cursor:pointer;font:13px system-ui}.ck{display:flex;gap:8px;align-items:center;font-size:13.5px;color:var(--tx);margin:6px 0}.ck input{width:auto}
 </style></head><body><div class="w">
 <h1>Pembuat Template SP Pasien HD</h1>
 <div class="tabs"><button id="t1" class="on">Data Identitas Pasien</button><button id="t2">Daftar Pasien Reguler</button></div>
@@ -30,21 +30,27 @@ small{color:var(--mu);display:block;margin-top:4px}
 <div><label>No. RM (angka)</label><input id="rm" inputmode="numeric" maxlength="12"></div>
 <div><label>Jenis kelamin</label><div class="r"><label><input type="radio" name="jk" value="L" checked>Laki-laki</label><label><input type="radio" name="jk" value="P">Perempuan</label></div></div>
 <div><label>Tanggal lahir</label><input id="lahir" type="date"></div>
-<div><label>Umur (otomatis, bisa diubah)</label><input id="umur" inputmode="numeric"></div>
+<div><label>Umur (kosong = otomatis per tanggal)</label><input id="umur" inputmode="numeric"></div>
 <div><label>Ruang</label><input id="ruang" value="HD"></div>
 <div><label>Kelas / bed (opsional)</label><input id="kelas"></div>
-<div><label>Tanggal masuk</label><input id="masuk" type="date"></div>
 <div><label>Shift</label><select id="shift"><option value="06.00|12.00">Pagi (06.00-12.00)</option><option value="11.30|17.30">Siang (11.30-17.30)</option><option value="17.00|23.00">Malam (17.00-23.00)</option></select></div>
-<div><label>Tanggal keluar (RM 85b)</label><input id="keluar" type="date"></div>
 <div><label>Jam masuk (otomatis dari shift)</label><input id="jam" value="06.00"></div>
 <div><label>Jam keluar (otomatis dari shift)</label><input id="jamk" value="12.00"></div>
 </div></div>
+<div class="card"><b>Tanggal SP</b>
+<div class="g" style="margin-top:8px">
+<div><label>Pola HD reguler</label><select id="pola"><option value="1,4">Senin – Kamis</option><option value="2,5">Selasa – Jumat</option><option value="3,6">Rabu – Sabtu</option></select></div>
+<div><label>Bulan &amp; tahun SP</label><input id="bln" type="month"></div>
+<div class="f b"><button id="gen" class="s">Buat tanggal 1 bulan sesuai pola</button><button id="clr" class="s">Kosongkan</button></div>
+<div><label>Atau tambah tanggal tertentu</label><input id="tx" type="date"></div>
+<div style="align-self:end"><button id="add" class="s2">Tambah tanggal</button></div>
+</div><div id="chips" class="b"></div><small id="cnt"></small></div>
 <div class="card"><b>Opsi</b>
 <div class="g" style="margin-top:8px"><div class="f"><label>Tanda jenis kelamin</label><select id="mark"><option value="○">Lingkari huruf L/P (○)</option><option value="X">Silang (X)</option><option value="✓">Centang (✓)</option></select></div></div>
 <label class="ck"><input type="checkbox" id="thn" checked>Lingkari "Thn" di samping umur</label>
 <label class="ck"><input type="checkbox" id="pad">Lengkapi No. RM dengan nol di depan sampai 8 digit</label>
 <label class="ck"><input type="checkbox" id="stmt">Isi juga nama &amp; tgl lahir di baris pernyataan lembar 1 (tengah halaman)</label></div>
-<div class="b"><button id="d1">Unduh Lembar 1 (SP HD)</button><button id="d2">Unduh Lembar 2 (RM 85b)</button><button id="d3" class="s">Unduh keduanya</button><button id="sv" class="s">Simpan ke daftar pasien</button></div>
+<div class="b"><button id="d1">Unduh SP (semua tanggal)</button><button id="d2">Unduh RM 85b (semua tanggal)</button><button id="d3" class="s">Unduh keduanya</button><button id="sv" class="s">Simpan ke daftar pasien</button></div>
 <small>Centang dan tulisan seragam (mis. "Hemodialisis") sudah ada di template dan ikut ke hasil unduhan.</small>
 </div>
 
@@ -65,39 +71,51 @@ function zip(files){const enc=new TextEncoder(),out=[],cd=[];let off=0;
  const e=new DataView(new ArrayBuffer(22));e.setUint32(0,0x06054b50,true);e.setUint16(8,files.length,true);e.setUint16(10,files.length,true);e.setUint32(12,cs,true);e.setUint32(16,off,true);
  return new Blob([...out,...cd,new Uint8Array(e.buffer)],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'})}
 const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-function buildDocx(key,map,ins){ins=ins||{};const parts=PARTS[key],dec=new TextDecoder(),enc=new TextEncoder();
- let x=dec.decode(b64(parts['word/document.xml'])),i=-1;
- x=x.replace(/<w:p>[\s\S]*?<\/w:p>/g,p=>{i++;const pre=ins[i]||'';if(!(i in map)||map[i]==='')return pre+p;
-  return pre+p.replace('<w:t xml:space="preserve"></w:t>','<w:t xml:space="preserve">'+esc(map[i])+'</w:t>')});
+function buildDocx(key,items){const parts=PARTS[key],dec=new TextDecoder(),enc=new TextEncoder();
+ const x0=dec.decode(b64(parts['word/document.xml'])),a=x0.indexOf('<w:body>')+8,z=x0.indexOf('<w:sectPr');let body='';
+ items.forEach((it,n)=>{let i=-1;const map=it.map,ins=it.ins||{};
+  let b=x0.slice(a,z).replace(/<w:p>[\s\S]*?<\/w:p>/g,p=>{i++;const pre=ins[i]||'';if(!(i in map)||map[i]==='')return pre+p;
+   return pre+p.replace('<w:t xml:space="preserve"></w:t>','<w:t xml:space="preserve">'+esc(map[i])+'</w:t>')});
+  if(n<items.length-1)b=b.replace(/<\/w:p>$/,'<w:r><w:br w:type="page"/></w:r></w:p>');body+=b});
+ const x=x0.slice(0,a)+body+x0.slice(z);
  const names=Object.keys(parts).sort((a,b)=>a==='[Content_Types].xml'?-1:b==='[Content_Types].xml'?1:0);
  return zip(names.map(n=>({name:n,data:n==='word/document.xml'?enc.encode(x):b64(parts[n])})))}
 // lingkaran "Thn": kotak 520x520 twip, posisi perkiraan dari foto contoh
 const circle=(x,y)=>'<w:p><w:pPr><w:framePr w:w="520" w:h="520" w:x="'+x+'" w:y="'+y+'" w:hAnchor="page" w:vAnchor="page" w:hRule="exact"/><w:spacing w:after="0" w:before="0" w:line="520" w:lineRule="exact"/><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Arial" w:cs="Arial" w:eastAsia="Arial" w:hAnsi="Arial"/><w:sz w:val="52"/><w:szCs w:val="52"/></w:rPr><w:t xml:space="preserve">\u25CB</w:t></w:r></w:p>';
-// peta kotak: nomor paragraf pada document.xml
-function maps(d){const jk={};jk[d.jk==='P'?3:2]=d.mark;
+// pusat lingkaran L/P dan "Thn" (twip) per lembar
+const CC={sp:{L:[5480,1833],P:[5746,1833],T:[10385,1883]},rm:{L:[5395,1978],P:[5691,1978],T:[10342,1950]}};
+function maps(d){const big=d.mark==='○',jk={};if(!big)jk[d.jk==='P'?3:2]=d.mark;
  const base=Object.assign({0:d.nama,1:d.rm,4:d.lahir,5:d.umur,6:d.ruang,7:d.kelas,8:d.masuk,9:d.jam},jk);
  const sp=Object.assign({},base,{66:d.masuk,67:d.jam});
  if(d.stmt){sp[58]=d.nama;sp[59]=d.lahir}
  const rm=Object.assign({},base,{10:d.masuk,11:d.jam,12:d.keluar,13:d.jamk,14:d.keluar,15:d.jamk});
- return {sp,rm,insSp:d.thn?{33:circle(10125,1623)}:{},insRm:d.thn?{22:circle(10082,1690)}:{}}}
+ const ci=k=>{const q=CC[k],c=q[d.jk==='P'?'P':'L'];return(big?circle(c[0]-260,c[1]-260):'')+(d.thn?circle(q.T[0]-260,q.T[1]-260):'')};
+ return {sp,rm,insSp:{33:ci('sp')},insRm:{22:ci('rm')}}}
 
-const $=i=>document.getElementById(i);let L=[];
+const $=i=>document.getElementById(i);let L=[],D=[];
 try{L=JSON.parse(localStorage.getItem('sphd_pasien')||'[]')}catch(e){}
 const store=()=>{try{localStorage.setItem('sphd_pasien',JSON.stringify(L))}catch(e){}};
-const iso=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-const fmt=v=>v?v.split('-').reverse().join('/'):'';
+const p2=n=>String(n).padStart(2,'0'),iso=d=>d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate());
+const fmt=v=>v?v.split('-').reverse().join('/'):'',HR=['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
 const jk=()=>document.querySelector('input[name=jk]:checked').value;
-$('masuk').value=$('keluar').value=iso(new Date());
-function umur(){const a=$('lahir').value,b=$('masuk').value;if(!a||!b)return;const x=new Date(a),y=new Date(b);let u=y.getFullYear()-x.getFullYear();if(y.getMonth()<x.getMonth()||(y.getMonth()==x.getMonth()&&y.getDate()<x.getDate()))u--;$('umur').value=u}
-$('lahir').onchange=umur;$('masuk').onchange=()=>{$('keluar').value=$('masuk').value;umur()};$('shift').onchange=()=>{const s=$('shift').value.split('|');$('jam').value=s[0];$('jamk').value=s[1]};
+const nx=new Date();nx.setDate(1);nx.setMonth(nx.getMonth()+1);$('bln').value=nx.getFullYear()+'-'+p2(nx.getMonth()+1);
+function chips(){D=[...new Set(D)].sort();const el=$('chips');el.innerHTML='';
+ D.forEach(s=>{const b=document.createElement('button');b.className='chip';b.textContent=HR[new Date(s+'T00:00:00').getDay()]+' '+fmt(s).slice(0,5);b.title='Klik untuk hapus';b.onclick=()=>{D=D.filter(x=>x!==s);chips()};el.appendChild(b)});
+ $('cnt').textContent=D.length?D.length+' tanggal → SP '+D.length*2+' halaman, RM 85b '+D.length+' halaman. Klik tanggal untuk menghapus.':'Belum ada tanggal.'}
+$('gen').onclick=()=>{const [y,m]=$('bln').value.split('-').map(Number);if(!y)return;const w=$('pola').value.split(',').map(Number);
+ for(let i=1,n=new Date(y,m,0).getDate();i<=n;i++){const d=new Date(y,m-1,i);if(w.includes(d.getDay()))D.push(iso(d))}chips()};
+$('add').onclick=()=>{if($('tx').value){D.push($('tx').value);chips()}};$('clr').onclick=()=>{D=[];chips()};
+$('shift').onchange=()=>{const s=$('shift').value.split('|');$('jam').value=s[0];$('jamk').value=s[1]};
+function age(l,s){if(!l)return'';const a=new Date(l),b=new Date(s);let u=b.getFullYear()-a.getFullYear();if(b.getMonth()<a.getMonth()||(b.getMonth()==a.getMonth()&&b.getDate()<a.getDate()))u--;return u}
 function data(){let rm=$('rm').value.replace(/\D/g,'');if($('pad').checked)rm=rm.padStart(8,'0');
- return{nama:$('nama').value.trim(),rm,jk:jk(),lahir:fmt($('lahir').value),umur:$('umur').value,ruang:$('ruang').value,kelas:$('kelas').value,masuk:fmt($('masuk').value),jam:$('jam').value,jamk:$('jamk').value,keluar:fmt($('keluar').value),thn:$('thn').checked,mark:$('mark').value,stmt:$('stmt').checked}}
+ return{nama:$('nama').value.trim(),rm,jk:jk(),lahir:fmt($('lahir').value),ruang:$('ruang').value,kelas:$('kelas').value,jam:$('jam').value,jamk:$('jamk').value,thn:$('thn').checked,mark:$('mark').value,stmt:$('stmt').checked}}
 function save(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000)}
-function get(w){const d=data();if(!d.nama){alert('Isi nama pasien dulu.');return}
+function get(w){const d=data();if(!d.nama){alert('Isi nama pasien dulu.');return}if(!D.length){alert('Tambahkan tanggal dulu.');return}
  if(d.rm.length>8&&!confirm('No. RM lebih dari 8 digit, kotak di form hanya muat 8. Lanjut?'))return;
- const m=maps(d),n=d.nama.replace(/[^\w]+/g,'_').replace(/^_|_$/g,''),t=d.masuk.replace(/\//g,'');
- if(w!=='rm')save(buildDocx('sp',m.sp,m.insSp),'SP_HD_'+n+'_'+t+'.docx');
- if(w!=='sp')setTimeout(()=>save(buildDocx('rm',m.rm,m.insRm),'RM85b_'+n+'_'+t+'.docx'),400)}
+ const sp=[],rm=[];D.forEach(s=>{const m=maps(Object.assign({},d,{masuk:fmt(s),keluar:fmt(s),umur:$('umur').value||age($('lahir').value,s)}));sp.push({map:m.sp,ins:m.insSp});rm.push({map:m.rm,ins:m.insRm})});
+ const n=d.nama.replace(/[^\w]+/g,'_').replace(/^_|_$/g,''),t=D[0]+(D.length>1?'_sd_'+D[D.length-1]:'');
+ if(w!=='rm')save(buildDocx('sp',sp),'SP_HD_'+n+'_'+t+'.docx');
+ if(w!=='sp')setTimeout(()=>save(buildDocx('rm',rm),'RM85b_'+n+'_'+t+'.docx'),400)}
 $('d1').onclick=()=>get('sp');$('d2').onclick=()=>get('rm');$('d3').onclick=()=>get('both');
 $('sv').onclick=()=>{const d=data();if(!d.nama){alert('Isi nama pasien dulu.');return}
  const o={nama:d.nama,rm:$('rm').value,jk:d.jk,lahir:$('lahir').value,ruang:d.ruang,kelas:d.kelas};
@@ -106,8 +124,8 @@ function draw(){const el=$('list');el.innerHTML=L.length?'':'<span style="color:
  L.forEach((p,i)=>{const r=document.createElement('div');r.className='row';r.innerHTML='<div><b></b><br><span></span></div><button class="s">Pakai</button><button class="s">Hapus</button>';
   r.querySelector('b').textContent=p.nama;r.querySelector('span').textContent='RM '+(p.rm||'-')+' · '+(p.jk==='P'?'P':'L')+' · '+fmt(p.lahir);
   const [u,h]=r.querySelectorAll('button');
-  u.onclick=()=>{$('nama').value=p.nama;$('rm').value=p.rm;document.querySelector('input[name=jk][value='+p.jk+']').checked=true;$('lahir').value=p.lahir;$('ruang').value=p.ruang;$('kelas').value=p.kelas||'';umur();tab(1)};
+  u.onclick=()=>{$('nama').value=p.nama;$('rm').value=p.rm;document.querySelector('input[name=jk][value='+p.jk+']').checked=true;$('lahir').value=p.lahir;$('ruang').value=p.ruang;$('kelas').value=p.kelas||'';tab(1)};
   h.onclick=()=>{if(confirm('Hapus '+p.nama+'?')){L.splice(i,1);store();draw()}};el.appendChild(r)})}
 function tab(n){$('tab1').style.display=n==1?'':'none';$('tab2').style.display=n==2?'block':'none';$('t1').className=n==1?'on':'';$('t2').className=n==2?'on':''}
-$('t1').onclick=()=>tab(1);$('t2').onclick=()=>tab(2);draw();
+$('t1').onclick=()=>tab(1);$('t2').onclick=()=>tab(2);draw();chips();
 </script></div></body></html>
