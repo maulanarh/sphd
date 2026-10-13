@@ -55,6 +55,7 @@ small{color:var(--mu);display:block;margin-top:4px}
 <label class="ck"><input type="checkbox" id="pad">Lengkapi No. RM dengan nol di depan sampai 8 digit</label>
 <label class="ck"><input type="checkbox" id="stmt">Isi juga nama &amp; tgl lahir di baris pernyataan lembar 1 (tengah halaman)</label></div>
 <div class="b"><button id="d1">Unduh SP (semua tanggal)</button><button id="d2">Unduh RM 85b (semua tanggal)</button><button id="d3" class="s">Unduh keduanya</button><button id="sv" class="s">Simpan ke daftar pasien</button></div>
+<small id="ringkas" style="font-weight:600;color:var(--tx)"></small>
 <small>Centang dan tulisan seragam (mis. "Hemodialisis") sudah ada di template dan ikut ke hasil unduhan.</small>
 </div>
 
@@ -106,7 +107,7 @@ const jk=()=>document.querySelector('input[name=jk]:checked').value;
 const nx=new Date();nx.setDate(1);nx.setMonth(nx.getMonth()+1);$('bln').value=nx.getFullYear()+'-'+p2(nx.getMonth()+1);
 function chips(){D=[...new Set(D)].sort();const el=$('chips');el.innerHTML='';
  D.forEach(s=>{const b=document.createElement('button');b.className='chip';b.textContent=HR[new Date(s+'T00:00:00').getDay()]+' '+fmt(s).slice(0,5);b.title='Klik untuk hapus';b.onclick=()=>{D=D.filter(x=>x!==s);chips()};el.appendChild(b)});
- $('cnt').textContent=D.length?D.length+' tanggal → SP '+D.length*2+' halaman, RM 85b '+D.length+' halaman. Klik tanggal untuk menghapus.':'Belum ada tanggal.'}
+ ringkas();$('cnt').textContent=D.length?D.length+' tanggal → SP '+D.length*2+' halaman, RM 85b '+D.length+' halaman. Klik tanggal untuk menghapus.':'Belum ada tanggal.'}
 $('gen').onclick=()=>{const [y,m]=$('bln').value.split('-').map(Number);if(!y)return;const w=$('pola').value.split(',').map(Number);
  for(let i=1,n=new Date(y,m,0).getDate();i<=n;i++){const d=new Date(y,m-1,i);if(w.includes(d.getDay()))D.push(iso(d))}chips()};
 $('add').onclick=()=>{if($('tx').value){D.push($('tx').value);chips()}};$('clr').onclick=()=>{D=[];chips()};
@@ -120,7 +121,7 @@ const thin=k=>$('tebal').value==='thin'?TK[k]:[];
 function get(w){const d=data();if(!d.nama){alert('Isi nama pasien dulu.');return}if(!D.length){alert('Tambahkan tanggal dulu.');return}
  if(d.rm.length>8&&!confirm('No. RM lebih dari 8 digit, kotak di form hanya muat 8. Lanjut?'))return;
  const sp=[],rm=[];D.forEach(s=>{const m=maps(Object.assign({},d,{masuk:fmt(s),keluar:fmt(s),umur:$('umur').value||age($('lahir').value,s)}));sp.push({map:m.sp,ins:m.insSp,blank:blank('sp'),thin:thin('sp')});rm.push({map:m.rm,ins:m.insRm,blank:blank('rm'),thin:thin('rm')})});
- const n=d.nama.replace(/[^\w]+/g,'_').replace(/^_|_$/g,''),t=D[0]+(D.length>1?'_sd_'+D[D.length-1]:'');
+ const n=d.nama.replace(/[^\w]+/g,'_').replace(/^_|_$/g,''),t=D[0]+(D.length>1?'_sd_'+D[D.length-1]:'')+'_'+d.jam.replace(/\D/g,'');
  if(w!=='rm')save(buildDocx('sp',sp),'SP_HD_'+n+'_'+t+'.docx');
  if(w!=='sp')setTimeout(()=>save(buildDocx('rm',rm),'RM85b_'+n+'_'+t+'.docx'),400)}
 $('d1').onclick=()=>get('sp');$('d2').onclick=()=>get('rm');$('d3').onclick=()=>get('both');
@@ -134,5 +135,7 @@ function draw(){const el=$('list');el.innerHTML=L.length?'':'<span style="color:
   u.onclick=()=>{$('nama').value=p.nama;$('rm').value=p.rm;document.querySelector('input[name=jk][value='+p.jk+']').checked=true;$('lahir').value=p.lahir;$('ruang').value=p.ruang;$('kelas').value=p.kelas||'';tab(1)};
   h.onclick=()=>{if(confirm('Hapus '+p.nama+'?')){L.splice(i,1);store();draw()}};el.appendChild(r)})}
 function tab(n){$('tab1').style.display=n==1?'':'none';$('tab2').style.display=n==2?'block':'none';$('t1').className=n==1?'on':'';$('t2').className=n==2?'on':''}
+function ringkas(){const o=$('shift').options[$('shift').selectedIndex].text.split(' ')[0];$('ringkas').textContent='Akan tercetak: shift '+o+', jam masuk '+$('jam').value+', jam keluar '+$('jamk').value+(D.length?' · '+D.length+' tanggal':' · belum ada tanggal')}
+['shift','jam','jamk'].forEach(i=>{$(i).addEventListener('input',ringkas);$(i).addEventListener('change',ringkas)});ringkas();
 $('t1').onclick=()=>tab(1);$('t2').onclick=()=>tab(2);draw();chips();
 </script></div></body></html>
